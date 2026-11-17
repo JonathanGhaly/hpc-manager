@@ -1,0 +1,70 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8snamespaceallowedstorageclasses
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sNamespaceAllowedStorageClasses
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties: {}
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8snamespaceallowedstorageclasses
+
+        storage_class_allowed(allowed, actual) {
+          allowed[_] == actual
+        }
+
+        violation[{"msg": msg}] {
+          ns := input.review.object.metadata.namespace
+          not data.inventory.namespace[ns]
+          msg := sprintf("Namespace '%v' is not yet available in Gatekeeper inventory; retry shortly.", [ns])
+        }
+
+        violation[{"msg": msg}] {
+          ns := input.review.object.metadata.namespace
+          namespace := data.inventory.namespace[ns]
+          annotations := object.get(namespace.metadata, "annotations", {})
+          raw := object.get(annotations, "hpc.aic.gov.eg/allowed-storageclasses", "")
+          raw == ""
+          msg := sprintf("Namespace '%v' has no allowed StorageClasses configured by AIC HPC Manager.", [ns])
+        }
+
+        violation[{"msg": msg}] {
+          ns := input.review.object.metadata.namespace
+          namespace := data.inventory.namespace[ns]
+          annotations := object.get(namespace.metadata, "annotations", {})
+          raw := object.get(annotations, "hpc.aic.gov.eg/allowed-storageclasses", "")
+          raw != ""
+          allowed := json.unmarshal(raw)
+          not is_array(allowed)
+          msg := sprintf("Namespace '%v' has an invalid allowed-StorageClass policy annotation.", [ns])
+        }
+
+        violation[{"msg": msg}] {
+          ns := input.review.object.metadata.namespace
+          namespace := data.inventory.namespace[ns]
+          annotations := object.get(namespace.metadata, "annotations", {})
+          raw := object.get(annotations, "hpc.aic.gov.eg/allowed-storageclasses", "")
+          raw != ""
+          not is_array(json.unmarshal(raw))
+          msg := sprintf("Namespace '%v' has an invalid allowed-StorageClass policy annotation.", [ns])
+        }
+
+        violation[{"msg": msg}] {
+          ns := input.review.object.metadata.namespace
+          namespace := data.inventory.namespace[ns]
+          annotations := object.get(namespace.metadata, "annotations", {})
+          raw := object.get(annotations, "hpc.aic.gov.eg/allowed-storageclasses", "")
+          raw != ""
+          allowed := json.unmarshal(raw)
+          is_array(allowed)
+          actual := object.get(input.review.object.spec, "storageClassName", "")
+          not storage_class_allowed(allowed, actual)
+          msg := sprintf("Namespace '%v' may only use one of its assigned StorageClasses. Requested '%v'; allowed: %v.", [ns, actual, allowed])
+        }

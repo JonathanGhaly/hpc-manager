@@ -1,0 +1,14 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sNamespaceAllowedStorageClasses
+metadata:
+  name: enforce-namespace-allowed-storageclasses
+spec:
+  enforcementAction: deny
+  match:
+    scope: Namespaced
+    kinds:
+      - apiGroups: [""]
+        kinds: ["PersistentVolumeClaim"]
+    namespaceSelector:
+      matchLabels:
+        hpc.aic.gov.eg/storage-policy: enforced

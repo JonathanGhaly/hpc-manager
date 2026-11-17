@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aic-hpc-manager
+  namespace: aic-hpc-manager
+  labels:
+    app.kubernetes.io/name: aic-hpc-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: aic-hpc-manager
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: aic-hpc-manager
+    spec:
+      serviceAccountName: aic-hpc-manager
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: manager
+          image: aic-hpc-manager:0.1.6
+          imagePullPolicy: Never
+          command: ["sh", "-c", "sleep infinity"]
+          stdin: true
+          tty: true
+          env:
+            - name: HPC_MANAGER_OPERATOR
+              value: "platform-admin"
+          volumeMounts:
+            - name: config
+              mountPath: /etc/aic-hpc-manager
+              readOnly: true
+            - name: audit
+              mountPath: /var/log/aic-hpc-manager
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: config
+          configMap:
+            name: aic-hpc-manager-config
+        - name: audit
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

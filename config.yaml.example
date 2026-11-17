@@ -1,0 +1,34 @@
+app:
+  name: AIC HPC Manager
+  audit_log: /var/log/aic-hpc-manager/audit.jsonl
+  operator_env: HPC_MANAGER_OPERATOR
+
+kubernetes:
+  # in_cluster is recommended for the server-side deployment.
+  in_cluster: true
+  kubeconfig: ""
+  context: ""
+  request_timeout_seconds: 15
+
+rbac:
+  # These ClusterRoles are created/maintained by the platform team.
+  # The application only binds them; it does not modify their rules.
+  user_cluster_role: slurm-project-user
+  admin_cluster_role: slurm-project-admin
+  rolebinding_prefix: hpcm
+  managed_by_label: hpc.aic.gov.eg/managed-by
+  managed_by_value: hpc-manager
+  namespace_managed_by_label: hpc.aic.gov.eg/managed-by
+  namespace_managed_by_value: slurm
+  user_label: hpc.aic.gov.eg/user
+  role_label: hpc.aic.gov.eg/role
+
+storage:
+  allowed_classes_annotation: hpc.aic.gov.eg/allowed-storageclasses
+  enforcement_label: hpc.aic.gov.eg/storage-policy
+  enforcement_label_value: enforced
+
+# Optional allow-list. Empty means show all namespaces with the configured
+# namespace_managed_by_label/value labels. Do not use this as an authorization
+# boundary; Kubernetes RBAC is the authorization boundary.
+namespace_filter_label: hpc.aic.gov.eg/managed-by=slurm
